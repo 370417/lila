@@ -43,6 +43,13 @@ const wrapSound = throttled('wrapAround');
 const borderSound = throttled('outOfBound');
 const errorSound = throttled('error');
 
+const makeNvuiCgConfig = (ctrl: AnalyseController) => ({
+  ...makeCgConfig(ctrl),
+  animation: { enabled: false },
+  drawable: { enabled: false },
+  coordinates: false,
+});
+
 lichess.AnalyseNVUI = function (redraw: Redraw) {
   const notify = new Notify(redraw),
     moveStyle = styleSetting(),
@@ -60,13 +67,12 @@ lichess.AnalyseNVUI = function (redraw: Redraw) {
     render(ctrl: AnalyseController): VNode {
       const d = ctrl.data,
         style = moveStyle.get();
-      if (!ctrl.chessground)
-        ctrl.chessground = Chessground(document.createElement('div'), {
-          ...makeCgConfig(ctrl),
-          animation: { enabled: false },
-          drawable: { enabled: false },
-          coordinates: false,
-        });
+      if (!ctrl.chessground) ctrl.chessground = Chessground(document.createElement('div'), makeNvuiCgConfig(ctrl));
+      else if (ctrl.cgVersion.js > ctrl.cgVersion.dom) {
+        ctrl.cgVersion.dom = ctrl.cgVersion.js;
+        ctrl.chessground.set(makeNvuiCgConfig(ctrl));
+      }
+
       return h('main.analyse', [
         h('div.nvui', [
           h('h1', 'Textual representation'),
