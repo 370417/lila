@@ -35,6 +35,7 @@ import * as moveView from '../moveView';
 import { bind } from '../util';
 import throttle from 'common/throttle';
 import { Role } from 'chessground/types';
+import * as studyPracticeView from '../study/practice/studyPracticeView';
 
 export const throttled = (sound: string) => throttle(100, () => lichess.sound.play(sound));
 
@@ -75,13 +76,17 @@ lichess.AnalyseNVUI = function (redraw: Redraw) {
 
       return h('main.analyse', [
         h('div.nvui', [
-          h('h1', 'Textual representation'),
-          h('h2', 'Game info'),
-          ...['white', 'black'].map((color: Color) =>
-            h('p', [color + ' player: ', renderPlayer(ctrl, playerByColor(d, color))])
-          ),
-          h('p', `${d.game.rated ? 'Rated' : 'Casual'} ${d.game.perf}`),
-          d.clock ? h('p', `Clock: ${d.clock.initial / 60} + ${d.clock.increment}`) : null,
+          h('h1', ctrl.studyPractice ? 'Practice' : 'Textual representation'),
+          ...(ctrl.studyPractice && ctrl.study
+            ? [studyPracticeView.side(ctrl.study), ...studyPracticeView.underboard(ctrl.study)]
+            : [
+                h('h2', 'Game info'),
+                ...['white', 'black'].map((color: Color) =>
+                  h('p', [color + ' player: ', renderPlayer(ctrl, playerByColor(d, color))])
+                ),
+                h('p', `${d.game.rated ? 'Rated' : 'Casual'} ${d.game.perf}`),
+                d.clock ? h('p', `Clock: ${d.clock.initial / 60} + ${d.clock.increment}`) : null,
+              ]),
           h('h2', 'Moves'),
           h(
             'p.moves',

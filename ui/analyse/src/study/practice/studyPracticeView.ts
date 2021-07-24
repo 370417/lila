@@ -72,6 +72,7 @@ export function underboard(ctrl: StudyCtrl): MaybeVNodes {
           ctrl.nextChapter()
             ? {
                 hook: bind('click', ctrl.goToNextChapter),
+                attrs: { href: '?' },
               }
             : {
                 attrs: { href: '/practice' },
@@ -85,6 +86,7 @@ export function underboard(ctrl: StudyCtrl): MaybeVNodes {
           'a.feedback.fail',
           {
             hook: bind('click', p.reset, ctrl.redraw),
+            attrs: { href: '?' },
           },
           [h('span', [renderGoal(p, p.goal().moves!)]), h('strong', 'Click to retry')]
         ),
