@@ -3,7 +3,7 @@ package lila.round
 import actorApi.round.{ DrawNo, ForecastPlay, HumanPlay, TakebackNo, TooManyPlies }
 import cats.data.Validated
 import chess.format.{ Forsyth, Uci }
-import chess.{ Centis, Clock, MoveMetrics, MoveOrDrop, Status }
+import chess.{ Centis, Clock, MoveMetrics, Move, Drop, Status }
 import java.util.concurrent.TimeUnit
 
 import lila.common.Bus
@@ -18,6 +18,8 @@ final private class Player(
     scheduleExpiration: ScheduleExpiration,
     uciMemo: UciMemo
 )(implicit ec: scala.concurrent.ExecutionContext) {
+
+  type MoveOrDrop = Either[Move, Drop]
 
   sealed private trait MoveResult
   private case object Flagged extends MoveResult
@@ -140,6 +142,7 @@ final private class Player(
         game.chess.drop(role, pos, metrics) map { case (ncg, drop) =>
           Clock.WithCompensatedLag(ncg, None) -> (Right(drop): MoveOrDrop)
         }
+      case Uci.Pass() => Validated.invalid("Cannot make null move in a game")
     }).map {
       case (ncg, _) if ncg.value.clock.exists(_.outOfTime(game.turnColor, withGrace = false)) => Flagged
       case (ncg, moveOrDrop) =>

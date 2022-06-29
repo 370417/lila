@@ -123,10 +123,10 @@ object PgnImport {
         case san :: rest =>
           san(prev.situation).fold(
             _ => none, // illegal move; stop here.
-            moveOrDrop => {
-              val game   = moveOrDrop.fold(prev.apply, prev.applyDrop)
-              val uci    = moveOrDrop.fold(_.toUci, _.toUci)
-              val sanStr = moveOrDrop.fold(Dumper.apply, Dumper.apply)
+            action => {
+              val game   = prev(action)
+              val uci    = action.toUci
+              val sanStr = Dumper(action) // might need to match in scalachess
               parseComments(san.metas.comments, annotator) match {
                 case (shapes, clock, comments) =>
                   Node(

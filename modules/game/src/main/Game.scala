@@ -4,7 +4,7 @@ import chess.Color.{ Black, White }
 import chess.format.{ FEN, Uci }
 import chess.opening.{ FullOpening, FullOpeningDB }
 import chess.variant.{ FromPosition, Standard, Variant }
-import chess.{ Castles, Centis, CheckCount, Clock, Color, Game => ChessGame, Mode, MoveOrDrop, Speed, Status }
+import chess.{ Castles, Centis, CheckCount, Clock, Color, Game => ChessGame, Mode, Action, Speed, Status, Move, Drop }
 import org.joda.time.DateTime
 
 import lila.common.Sequence
@@ -29,6 +29,8 @@ case class Game(
     metadata: Metadata
 ) {
   lazy val clockHistory = chess.clock flatMap loadClockHistory
+
+  type MoveOrDrop = Either[Move, Drop]
 
   def situation = chess.situation
   def board     = chess.situation.board
@@ -233,6 +235,7 @@ case class Game(
     history.lastMove map {
       case Uci.Drop(target, _) => s"$target$target"
       case m: Uci.Move         => m.keys
+      case Uci.Pass()          => "0000"
     }
 
   def updatePlayer(color: Color, f: Player => Player) =

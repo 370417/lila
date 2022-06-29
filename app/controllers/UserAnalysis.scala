@@ -54,7 +54,7 @@ final class UserAnalysis(
     makePov {
       fen.filter(_.value.nonEmpty).flatMap {
         Forsyth.<<<@(variant, _)
-      } | SituationPlus(Situation(variant), 1)
+      } | SituationPlus(Situation(variant), 1) // TODO: enable null moves
     }
 
   private[controllers] def makePov(from: SituationPlus): Pov =

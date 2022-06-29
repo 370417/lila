@@ -284,6 +284,14 @@ export interface AnaDrop {
   path: string;
   ch?: string;
 }
+
+export interface AnaPass {
+  variant?: VariantKey;
+  fen: Fen;
+  path: string;
+  ch?: string;
+}
+
 export interface WithWho {
   w: {
     s: string;

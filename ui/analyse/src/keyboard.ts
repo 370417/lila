@@ -71,6 +71,7 @@ export const bind = (ctrl: AnalyseCtrl) => {
       ctrl.redraw();
     })
     .bind('x', ctrl.toggleThreatMode)
+    .bind('0', ctrl.userPass)
     .bind('e', () => {
       ctrl.toggleExplorer();
       ctrl.redraw();

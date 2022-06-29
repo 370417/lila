@@ -19,8 +19,11 @@ final class UciMemo(gameRepo: GameRepo)(implicit ec: scala.concurrent.ExecutionC
     val current = ~cache.getIfPresent(game.id)
     cache.put(game.id, current :+ uciMove)
   }
-  def add(game: Game, move: chess.MoveOrDrop): Unit =
-    add(game, UciDump.move(game.variant, force960Notation = true)(move))
+  def add(game: Game, move: Either[chess.Move, chess.Drop]): Unit =
+    add(game, UciDump.move(game.variant, force960Notation = true)(move match {
+      case Left(m) => m
+      case Right(d) => d
+    }))
 
   def set(game: Game, uciMoves: Seq[String]) =
     cache.put(game.id, uciMoves.toVector)

@@ -31,7 +31,7 @@ private object UciToPgn {
       for {
         situation <-
           if (ply == replay.setup.startedAtTurn + 1) valid(replay.setup.situation)
-          else replay moveAtPly ply map (_.fold(_.situationBefore, _.situationBefore)) toValid "No move found"
+          else replay moveAtPly ply map (_.situationBefore) toValid "No move found"
         ucis <- variation.map(Uci.apply).sequence toValid "Invalid UCI moves " + variation
         moves <-
           ucis.foldLeft[Validated[String, (Situation, List[Either[Move, Drop]])]](valid(situation -> Nil)) {

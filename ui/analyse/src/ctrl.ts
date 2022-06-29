@@ -481,6 +481,17 @@ export default class AnalyseCtrl {
     } else this.jump(this.path);
   };
 
+  userPass = (): void => {
+    this.justPlayed = undefined;
+    this.justDropped = undefined;
+    const pass = {
+      variant: this.data.game.variant.key,
+      fen: this.node.fen,
+      path: this.path,
+    };
+    this.socket.sendAnaPass(pass);
+  };
+
   userMove = (orig: Key, dest: Key, capture?: JustCaptured): void => {
     this.justPlayed = orig;
     this.justDropped = undefined;
