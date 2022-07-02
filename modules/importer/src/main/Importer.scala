@@ -14,7 +14,7 @@ final class Importer(gameRepo: GameRepo)(implicit ec: scala.concurrent.Execution
       gameRepo.findPgnImport(data.pgn) flatMap { _.fold(processing)(fuccess) }
 
     gameExists {
-      (data preprocess user).toFuture flatMap { case Preprocessed(g, _, initialFen, _) =>
+      data.preprocess(user, allowPass = false).toFuture flatMap { case Preprocessed(g, _, initialFen, _) =>
         val game = forceId.fold(g.sloppy)(g.withId)
         gameRepo.insertDenormalized(game, initialFen = initialFen) >> {
           game.pgnImport.flatMap(_.user).isDefined ?? gameRepo.setImportCreatedAt(game)
@@ -30,10 +30,12 @@ final class Importer(gameRepo: GameRepo)(implicit ec: scala.concurrent.Execution
     }
   }
 
-  def inMemory(data: ImportData): Validated[String, (Game, Option[FEN])] =
-    data.preprocess(user = none).flatMap { case Preprocessed(game, _, fen, _) =>
-      if (game.variant.standard && Encoder.encode(game.sloppy.pgnMoves.toArray) == null)
-        Validated.invalid("The PGN contains illegal and/or ambiguous moves.")
+  def inMemory(data: ImportData, allowPass: Boolean): Validated[String, (Game, Option[FEN])] =
+    data.preprocess(user = none, allowPass).flatMap { case Preprocessed(game, _, fen, _) =>
+      // Skip validation to test out passing
+      // TODO: validate with scalachess instead of Encoder
+      if (game.variant.standard && !allowPass && Encoder.encode(game.sloppy.pgnMoves.toArray) == null)
+        Validated.invalid("The pgn contains illegal and/or ambiguous moves.")
       else
         Validated.valid((game withId "synthetic", fen))
     }

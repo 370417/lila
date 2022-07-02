@@ -34,7 +34,7 @@ object importGame {
           form("pgn").value flatMap { pgn =>
             lila.importer
               .ImportData(pgn, none)
-              .preprocess(none)
+              .preprocess(none, allowPass = false)
               .fold(
                 err =>
                   frag(

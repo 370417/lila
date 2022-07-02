@@ -146,7 +146,7 @@ final class UserAnalysis(
           jsonFormError,
           data =>
             env.importer.importer
-              .inMemory(data)
+              .inMemory(data, allowPass = true)
               .fold(
                 err => BadRequest(jsonError(err)).as(JSON).fuccess,
                 { case (game, fen) =>

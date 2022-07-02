@@ -26,7 +26,7 @@ object PgnImport {
   )
 
   def apply(pgn: String, contributors: List[LightUser]): Validated[String, Result] =
-    ImportData(pgn, analyse = none).preprocess(user = none).map {
+    ImportData(pgn, analyse = none).preprocess(user = none, allowPass = true).map {
       case Preprocessed(game, replay, initialFen, parsedPgn) =>
         val annotator = findAnnotator(parsedPgn, contributors)
         parseComments(parsedPgn.initialPosition.comments, annotator) match {

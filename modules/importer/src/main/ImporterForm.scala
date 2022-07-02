@@ -20,7 +20,8 @@ final class ImporterForm {
   )
 
   def checkPgn(pgn: String): Validated[String, Preprocessed] = ImporterForm.catchOverflow { () =>
-    ImportData(pgn, none).preprocess(none)
+    ImportData(pgn, none).preprocess(none, allowPass = true) // TODO: where is this used?
+    // What should the value of allowPass be?
   }
 }
 
@@ -54,11 +55,12 @@ case class ImportData(pgn: String, analyse: Option[String]) {
       case Reader.Result.Incomplete(replay, _) => replay
     }
 
-  def preprocess(user: Option[String]): Validated[String, Preprocessed] = ImporterForm.catchOverflow(() =>
+  def preprocess(user: Option[String], allowPass: Boolean): Validated[String, Preprocessed] = ImporterForm.catchOverflow(() =>
     Parser.full(pgn) map { parsed =>
       Reader.fullWithSans(
         parsed,
-        sans => sans.copy(value = sans.value take maxPlies)
+        sans => sans.copy(value = sans.value take maxPlies),
+        allowPass = allowPass
       ) pipe evenIncomplete pipe { case replay @ Replay(setup, _, state) =>
         val initBoard    = parsed.tags.fen flatMap Forsyth.<< map (_.board)
         val fromPosition = initBoard.nonEmpty && !parsed.tags.fen.exists(_.initial)
