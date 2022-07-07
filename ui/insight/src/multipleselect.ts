@@ -11,20 +11,6 @@
     const display = window.getComputedStyle(this).display;
     return display && display != 'none';
   }
-  var sprintf = function (str) {
-    var args = arguments,
-      flag = true,
-      i = 1;
-    str = str.replace(/%s/g, function () {
-      var arg = args[i++];
-      if (typeof arg === 'undefined') {
-        flag = false;
-        return '';
-      }
-      return arg;
-    });
-    return flag ? str : '';
-  };
   function MultipleSelect($el, options) {
     var that = this,
       name = $el.attr('name') || options.name || '';
@@ -32,28 +18,17 @@
     this.$el = $el.hide();
     this.$label =
       this.$el.closest('label') ||
-      (this.$el.attr('id') && $(sprintf('label[for="%s"]', this.$el.attr('id').replace(/:/g, '\\:'))));
-    this.$parent = $(
-      sprintf('<div class="ms-parent %s" %s/>', $el.attr('class') || '', sprintf('title="%s"', $el.attr('title')))
-    );
+      (this.$el.attr('id') && $(`label[for="${this.$el.attr('id').replace(/:/g, '\\:')}"]`));
+    this.$parent = $(`<div class="ms-parent ${$el.attr('class') || ''}" title="${$el.attr('title')}"/>`);
     this.$choice = $(
-      sprintf(
-        [
-          '<button type="button" class="ms-choice">',
-          '<span class="placeholder">%s</span>',
-          '<div></div>',
-          '</button>',
-        ].join(''),
-        this.options.placeholder
-      )
+      [
+        '<button type="button" class="ms-choice">',
+        `<span class="placeholder">${this.options.placeholder}</span>`,
+        '<div></div>',
+        '</button>',
+      ].join('')
     );
-    this.$drop = $(
-      sprintf(
-        '<div class="ms-drop %s"%s></div>',
-        this.options.position,
-        sprintf(' style="width: %s"', this.options.dropWidth)
-      )
-    );
+    this.$drop = $(`<div class="ms-drop ${this.options.position}" style="width: ${this.options.dropWidth}"></div>`);
     this.$el.after(this.$parent);
     this.$parent.append(this.$choice);
     this.$parent.append(this.$drop);
@@ -99,7 +74,7 @@
           [
             '<li class="ms-select-all">',
             '<label>',
-            sprintf('<input type="checkbox" %s /> ', this.selectAllName),
+            `<input type="checkbox" ${this.selectAllName} /> `,
             this.options.selectAllDelimiter[0],
             this.options.selectAllText,
             this.options.selectAllDelimiter[1],
@@ -111,7 +86,7 @@
       $.each(this.$el.children(), function (i, elm) {
         $ul.append(that.optionToHtml(i, elm));
       });
-      $ul.append(sprintf('<li class="ms-no-results">%s</li>', this.options.noMatchesFound));
+      $ul.append(`<li class="ms-no-results">${this.options.noMatchesFound}</li>`);
       this.$drop.append($ul);
       this.$drop.find('ul').css('max-height', this.options.maxHeight + 'px');
       this.$drop.find('.multiple').css('width', this.options.multipleWidth + 'px');
@@ -132,7 +107,7 @@
       var that = this,
         $elm = $(elm),
         classes = $elm.attr('class') || '',
-        title = sprintf('title="%s"', $elm.attr('title')),
+        title = `title="${$elm.attr('title')}"`,
         multiple = this.options.multiple ? 'multiple' : '',
         disabled,
         type = this.options.single ? 'radio' : 'checkbox';
@@ -140,21 +115,16 @@
         var value = $elm.val(),
           text = that.options.textTemplate($elm),
           selected = $elm.prop('selected'),
-          style = sprintf('style="%s"', this.options.styler(value)),
+          style = `style="${this.options.styler(value)}"`,
           $el;
         disabled = groupDisabled || $elm.prop('disabled');
         $el = $(
           [
-            sprintf('<li class="%s %s" %s %s>', multiple, classes, title, style),
-            sprintf('<label class="%s">', disabled ? 'disabled' : ''),
-            sprintf(
-              '<input type="%s" %s%s%s%s>',
-              type,
-              this.selectItemName,
-              selected ? ' checked="checked"' : '',
-              disabled ? ' disabled="disabled"' : '',
-              sprintf(' data-group="%s"', group)
-            ),
+            `<li class="${multiple} ${classes}" ${title} ${style}>`,
+            `<label class="${disabled ? 'disabled' : ''}">`,
+            `<input type="${type}" ${this.selectItemName} ${selected ? 'checked="checked"' : ''} ${
+              disabled ? 'disabled="disabled"' : ''
+            } data-group="${group}">`,
             text,
             '</label>',
             '</li>',
@@ -171,10 +141,10 @@
         $group.append(
           [
             '<li class="group">',
-            sprintf('<label class="optgroup %s" data-group="%s">', disabled ? 'disabled' : '', group),
+            `<label class="optgroup ${disabled ? 'disabled' : ''}" data-group="${group}">`,
             this.options.hideOptgroupCheckboxes || this.options.single
               ? ''
-              : sprintf('<input type="checkbox" %s %s>', this.selectGroupName, disabled ? 'disabled="disabled"' : ''),
+              : `<input type="checkbox" ${this.selectGroupName} ${disabled ? 'disabled="disabled"' : ''}>`,
             label,
             '</label>',
             '</li>',
@@ -252,7 +222,7 @@
       this.$selectGroups.off('click').on('click', function () {
         var group = $(this).parent().attr('data-group'),
           $items = that.$selectItems.filter(isVisible),
-          $children = $items.filter(sprintf('[data-group="%s"]', group)),
+          $children = $items.filter(`[data-group="${group}"]`),
           checked = $children.length !== $children.filter(':checked').length;
         $children.prop('checked', checked);
         that.updateSelectAll();
@@ -359,7 +329,7 @@
       }
       this.$el.val(this.getSelects()).trigger('change');
       this.$drop.find('li').removeClass('selected');
-      this.$drop.find(sprintf('input[%s]:checked', this.selectItemName)).each(function () {
+      this.$drop.find(`input[${this.selectItemName}]:checked`).each(function () {
         $(this).parents('li').first().addClass('selected');
       });
       if (!isInit) {
@@ -380,7 +350,7 @@
       var $items = this.$selectItems.filter(isVisible);
       $.each(this.$selectGroups, function (i, val) {
         var group = $(val).parent().attr('data-group'),
-          $children = $items.filter(sprintf('[data-group="%s"]', group));
+          $children = $items.filter('[data-group="${group}"]');
         $(val).prop('checked', $children.length && $children.length === $children.filter(':checked').length);
       });
     },
@@ -388,7 +358,7 @@
       var that = this,
         texts = [],
         values = [];
-      this.$drop.find(sprintf('input[%s]:checked', this.selectItemName)).each(function () {
+      this.$drop.find(`input[${this.selectItemName}]:checked`).each(function () {
         texts.push($(this).parents('li').first().text());
         values.push($(this).val());
       });
@@ -398,7 +368,7 @@
           var html = [],
             text = $(this).parent().text().trim(),
             group = $(this).parent().data('group'),
-            $children = that.$drop.find(sprintf('[%s][data-group="%s"]', that.selectItemName, group)),
+            $children = that.$drop.find(`[${that.selectItemName}][data-group="${group}"]`),
             $selected = $children.filter(':checked');
           if (!$selected.length) {
             return;
@@ -422,7 +392,7 @@
       var that = this;
       this.$selectItems.prop('checked', false);
       $.each(values, function (i, value) {
-        that.$selectItems.filter(sprintf('[value="%s"]', value)).prop('checked', true);
+        that.$selectItems.filter(`[value="${value}"]`).prop('checked', true);
       });
       this.$selectAll.prop('checked', this.$selectItems.length === this.$selectItems.filter(':checked').length);
       $.each(that.$selectGroups, function (i, val) {
@@ -482,7 +452,7 @@
           var $parent = $(this).parent();
           var group = $parent.attr('data-group'),
             $items = that.$selectItems.filter(isVisible);
-          $parent[$items.filter(sprintf('[data-group="%s"]', group)).length ? 'show' : 'hide']();
+          $parent[$items.filter('[data-group="${group}"]').length ? 'show' : 'hide']();
         });
         if (this.$selectItems.parent().filter(isVisible).length) {
           this.$selectAll.parent().show();
