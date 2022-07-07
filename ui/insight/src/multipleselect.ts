@@ -12,7 +12,7 @@
     return display && display != 'none';
   }
   function MultipleSelect($el, options) {
-    var that = this,
+    const that = this,
       name = $el.attr('name') || options.name || '';
     this.options = options;
     this.$el = $el.hide();
@@ -57,7 +57,7 @@
   MultipleSelect.prototype = {
     constructor: MultipleSelect,
     init: function () {
-      var that = this,
+      const that = this,
         $ul = $('<ul></ul>');
       this.$drop.html('');
       if (this.options.filter) {
@@ -104,21 +104,20 @@
       }
     },
     optionToHtml: function (i, elm, group, groupDisabled) {
-      var that = this,
+      const that = this,
         $elm = $(elm),
         classes = $elm.attr('class') || '',
         title = `title="${$elm.attr('title')}"`,
         multiple = this.options.multiple ? 'multiple' : '',
-        disabled,
         type = this.options.single ? 'radio' : 'checkbox';
+      let disabled;
       if ($elm.is('option')) {
-        var value = $elm.val(),
+        const value = $elm.val(),
           text = that.options.textTemplate($elm),
           selected = $elm.prop('selected'),
-          style = `style="${this.options.styler(value)}"`,
-          $el;
+          style = `style="${this.options.styler(value)}"`;
         disabled = groupDisabled || $elm.prop('disabled');
-        $el = $(
+        const $el = $(
           [
             `<li class="${multiple} ${classes}" ${title} ${style}>`,
             `<label class="${disabled ? 'disabled' : ''}">`,
@@ -134,7 +133,7 @@
         return $el;
       }
       if ($elm.is('optgroup')) {
-        var label = that.options.labelTemplate($elm),
+        const label = that.options.labelTemplate($elm),
           $group = $('<div/>');
         group = 'group_' + i;
         disabled = $elm.prop('disabled');
@@ -157,7 +156,7 @@
       }
     },
     events: function () {
-      var that = this,
+      const that = this,
         toggleOpen = function (e) {
           e.preventDefault();
           that[that.options.isOpen ? 'close' : 'open']();
@@ -208,7 +207,7 @@
           that.filter();
         });
       this.$selectAll.off('click').on('click', function () {
-        var checked = $(this).prop('checked'),
+        const checked = $(this).prop('checked'),
           $items = that.$selectItems.filter(isVisible);
         if ($items.length === that.$selectItems.length) {
           that[checked ? 'checkAll' : 'uncheckAll']();
@@ -220,7 +219,7 @@
         }
       });
       this.$selectGroups.off('click').on('click', function () {
-        var group = $(this).parent().attr('data-group'),
+        const group = $(this).parent().attr('data-group'),
           $items = that.$selectItems.filter(isVisible),
           $children = $items.filter(`[data-group="${group}"]`),
           checked = $children.length !== $children.filter(':checked').length;
@@ -248,7 +247,7 @@
           that.close();
         }
         if (that.options.single) {
-          var clickedVal = $(this).val();
+          const clickedVal = $(this).val();
           that.$selectItems
             .filter(function () {
               return $(this).val() !== clickedVal;
@@ -274,7 +273,7 @@
         this.$noResults.show();
       }
       if (this.options.container) {
-        var offset = this.$drop.offset();
+        const offset = this.$drop.offset();
         this.$drop.appendTo($(this.options.container));
         this.$drop.offset({ top: offset.top, left: offset.left });
       }
@@ -295,14 +294,14 @@
       this.options.onClose();
     },
     animateMethod: function (method) {
-      var methods = {
+      const methods = {
         show: { fade: 'fadeIn', slide: 'slideDown' },
         hide: { fade: 'fadeOut', slide: 'slideUp' },
       };
       return methods[method][this.options.animate] || method;
     },
     update: function (isInit) {
-      var selects = this.options.displayValues ? this.getSelects() : this.getSelects('text'),
+      const selects = this.options.displayValues ? this.getSelects() : this.getSelects('text'),
         $span = this.$choice.find('span'),
         sl = selects.length;
       if (sl === 0) {
@@ -337,7 +336,7 @@
       }
     },
     updateSelectAll: function (isInit) {
-      var $items = this.$selectItems;
+      let $items = this.$selectItems;
       if (!isInit) {
         $items = $items.filter(isVisible);
       }
@@ -347,15 +346,15 @@
       }
     },
     updateOptGroupSelect: function () {
-      var $items = this.$selectItems.filter(isVisible);
+      const $items = this.$selectItems.filter(isVisible);
       $.each(this.$selectGroups, function (i, val) {
-        var group = $(val).parent().attr('data-group'),
+        const group = $(val).parent().attr('data-group'),
           $children = $items.filter('[data-group="${group}"]');
         $(val).prop('checked', $children.length && $children.length === $children.filter(':checked').length);
       });
     },
     getSelects: function (type) {
-      var that = this,
+      const that = this,
         texts = [],
         values = [];
       this.$drop.find(`input[${this.selectItemName}]:checked`).each(function () {
@@ -365,7 +364,7 @@
       if (type === 'text' && this.$selectGroups.length) {
         texts = [];
         this.$selectGroups.each(function () {
-          var html = [],
+          const html = [],
             text = $(this).parent().text().trim(),
             group = $(this).parent().data('group'),
             $children = that.$drop.find(`[${that.selectItemName}][data-group="${group}"]`),
@@ -376,7 +375,7 @@
           html.push('[');
           html.push(text);
           if ($children.length > $selected.length) {
-            var list = [];
+            const list = [];
             $selected.each(function () {
               list.push($(this).parent().text());
             });
@@ -389,14 +388,14 @@
       return type === 'text' ? texts : values;
     },
     setSelects: function (values) {
-      var that = this;
+      const that = this;
       this.$selectItems.prop('checked', false);
       $.each(values, function (i, value) {
         that.$selectItems.filter(`[value="${value}"]`).prop('checked', true);
       });
       this.$selectAll.prop('checked', this.$selectItems.length === this.$selectItems.filter(':checked').length);
       $.each(that.$selectGroups, function (i, val) {
-        var group = $(val).parent().attr('data-group'),
+        const group = $(val).parent().attr('data-group'),
           $children = that.$selectItems.filter('[data-group="' + group + '"]');
         $(val).prop('checked', $children.length && $children.length === $children.filter(':checked').length);
       });
@@ -434,7 +433,7 @@
       this.init();
     },
     filter: function () {
-      var that = this,
+      const that = this,
         text = this.$searchInput.val().trim().toLowerCase();
       if (text.length === 0) {
         this.$selectAll.parent().show();
@@ -444,13 +443,13 @@
         this.$noResults.hide();
       } else {
         this.$selectItems.each(function () {
-          var $parent = $(this).parent();
+          const $parent = $(this).parent();
           $parent[$parent.text().toLowerCase().indexOf(text) < 0 ? 'hide' : 'show']();
         });
         this.$disableItems.parent().hide();
         this.$selectGroups.each(function () {
-          var $parent = $(this).parent();
-          var group = $parent.attr('data-group'),
+          const $parent = $(this).parent(),
+            group = $parent.attr('data-group'),
             $items = that.$selectItems.filter(isVisible);
           $parent[$items.filter('[data-group="${group}"]').length ? 'show' : 'hide']();
         });
@@ -468,9 +467,8 @@
     },
   };
   $.fn.multipleSelect = function () {
-    var option = arguments[0],
+    const option = arguments[0],
       args = arguments,
-      value,
       allowedMethods = [
         'getSelects',
         'setSelects',
@@ -485,9 +483,10 @@
         'refresh',
         'close',
       ];
+    let value;
     this.each(function () {
-      var $this = $(this),
-        data = this['multipleSelect'],
+      let data = this['multipleSelect'];
+      const $this = $(this),
         options = {
           ...$.fn.multipleSelect.defaults,
           ...(typeof option === 'object' ? option : {}),
