@@ -1,5 +1,4 @@
 import { view as cevalView } from 'ceval';
-import { read as readFen } from 'chessground/fen';
 import { parseFen } from 'chessops/fen';
 import { defined } from 'common';
 import {
@@ -13,10 +12,9 @@ import {
 } from 'common/snabbdom';
 import { getPlayer, playable } from 'game';
 import * as router from 'game/router';
-import * as materialView from 'game/view/material';
 import statusView from 'game/view/status';
 import { h, VNode } from 'snabbdom';
-import { ops as treeOps, path as treePath } from 'tree';
+import { path as treePath } from 'tree';
 import { render as trainingView } from './roundTraining';
 import { view as actionMenu } from './actionMenu';
 import renderClocks from './clocks';
@@ -31,13 +29,13 @@ import * as chessground from './ground';
 import { ConcealOf } from './interfaces';
 import { view as keyboardView } from './keyboard';
 import * as pgnExport from './pgnExport';
-import practiceView from './practice/practiceView';
+import { practiceView, renderNextChapter } from './practice/practiceView';
 import retroView from './retrospect/retroView';
 import serverSideUnderboard from './serverSideUnderboard';
 import * as gbEdit from './study/gamebook/gamebookEdit';
 import * as gbPlay from './study/gamebook/gamebookPlayView';
 import { StudyCtrl } from './study/interfaces';
-import renderPlayerBars from './study/playerBars';
+import { renderPlayerBars, renderMaterialDiffs } from './study/playerBars';
 import * as studyPracticeView from './study/practice/studyPracticeView';
 import relayManager from './study/relay/relayManagerView';
 import relayTour from './study/relay/relayTourView';
@@ -92,24 +90,6 @@ function makeConcealOf(ctrl: AnalyseCtrl): ConcealOf | undefined {
     };
   return undefined;
 }
-
-export const renderNextChapter = (ctrl: AnalyseCtrl) =>
-  !ctrl.embed && !ctrl.opts.relay && ctrl.study?.hasNextChapter()
-    ? h(
-        'button.next.text',
-        {
-          attrs: {
-            'data-icon': '',
-            type: 'button',
-          },
-          hook: bind('click', ctrl.study.goToNextChapter),
-          class: {
-            highlighted: !!ctrl.outcome() || ctrl.node == treeOps.last(ctrl.mainline),
-          },
-        },
-        ctrl.trans.noarg('nextChapter')
-      )
-    : null;
 
 const renderAnalyse = (ctrl: AnalyseCtrl, concealOf?: ConcealOf) =>
   h('div.analyse__moves.areplay', [
@@ -336,20 +316,6 @@ const analysisDisabled = (ctrl: AnalyseCtrl): MaybeVNode =>
         ),
       ])
     : undefined;
-
-export function renderMaterialDiffs(ctrl: AnalyseCtrl): [VNode, VNode] {
-  const cgState = ctrl.chessground?.state,
-    pieces = cgState ? cgState.pieces : readFen(ctrl.node.fen);
-
-  return materialView.renderMaterialDiffs(
-    !!ctrl.data.pref.showCaptured,
-    ctrl.bottomColor(),
-    pieces,
-    !!(ctrl.data.player.checks || ctrl.data.opponent.checks), // showChecks
-    ctrl.nodeList,
-    ctrl.node.ply
-  );
-}
 
 const renderPlayerStrip = (cls: string, materialDiff: VNode, clock?: VNode): VNode =>
   h('div.analyse__player_strip.' + cls, [materialDiff, clock]);

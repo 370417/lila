@@ -3,7 +3,7 @@ import { h, VNode } from 'snabbdom';
 import { bind, MaybeVNodes } from 'common/snabbdom';
 import { PracticeCtrl, Comment } from './practiceCtrl';
 import AnalyseCtrl from '../ctrl';
-import { renderNextChapter } from '../view';
+import { ops as treeOps } from 'tree';
 
 function commentBest(c: Comment, root: AnalyseCtrl, ctrl: PracticeCtrl): MaybeVNodes {
   return c.best
@@ -95,7 +95,25 @@ function renderRunning(root: AnalyseCtrl, ctrl: PracticeCtrl): VNode {
   ]);
 }
 
-export default function (root: AnalyseCtrl): VNode | undefined {
+export const renderNextChapter = (ctrl: AnalyseCtrl) =>
+  !ctrl.embed && !ctrl.opts.relay && ctrl.study?.hasNextChapter()
+    ? h(
+        'button.next.text',
+        {
+          attrs: {
+            'data-icon': '',
+            type: 'button',
+          },
+          hook: bind('click', ctrl.study.goToNextChapter),
+          class: {
+            highlighted: !!ctrl.outcome() || ctrl.node == treeOps.last(ctrl.mainline),
+          },
+        },
+        ctrl.trans.noarg('nextChapter')
+      )
+    : null;
+
+export function practiceView(root: AnalyseCtrl): VNode | undefined {
   const ctrl = root.practice;
   if (!ctrl) return;
   const comment: Comment | null = ctrl.comment();
