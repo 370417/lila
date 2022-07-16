@@ -1,8 +1,8 @@
 image: ghcr.io/rosen-score/lila-gitpod:main
 
 additionalRepositories:
-  - url: https://github.com/lichess-org/lila-db-seed.git
   - url: https://github.com/lichess-org/lila-ws.git
+  - url: https://github.com/lichess-org/lila-db-seed.git
   - url: https://github.com/lichess-org/fishnet.git
   - url: https://github.com/lichess-org/lila-fishnet.git
 
@@ -32,16 +32,33 @@ tasks:
       net.asset.base_url = "$(gp url 9663)"
       EOF
       ## Create config for lila-ws
-      tee /workspace/lila-ws-codespace-application.conf <<EOF
+      tee /workspace/lila-ws-gitpod-application.conf <<EOF
       include "application"
       csrf.origin = "$(gp url 9663)"
       EOF
       gp sync-done setup
+  - name: fishnet (Stockfish analysis)
+    command: |
+      cd /workspace/fishnet/
+      tee fishnet.ini <<EOF
+      [fishnet]
+      cores=auto
+      systembacklog=long
+      userbacklog=short
+      EOF
+      cargo build
+      gp ports await 9663 # wait for lila to start
+      cargo run -- --endpoint http://localhost:9663/fishnet/
+  - name: lila-fishnet (Play computer)
+    openMode: split-right
+    command: |
+      cd /workspace/lila-fishnet/
+      sbt run -Dhttp.port=9665
   - name: lila-ws
     command: |
       gp sync-await setup
       cd /workspace/lila-ws
-      sbt -Dconfig.file=/workspace/lila-ws-codespace-application.conf run
+      sbt -Dconfig.file=/workspace/lila-ws-gitpod-application.conf run
   - name: lila
     openMode: split-right
     command: |
