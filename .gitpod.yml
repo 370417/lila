@@ -1,0 +1,75 @@
+image: ghcr.io/rosen-score/lila-gitpod:main
+
+additionalRepositories:
+  - url: https://github.com/lichess-org/lila-db-seed.git
+  - url: https://github.com/lichess-org/lila-ws.git
+  - url: https://github.com/lichess-org/fishnet.git
+  - url: https://github.com/lichess-org/lila-fishnet.git
+
+tasks:
+  - name: setup
+    init: |
+      # setup initial database and seed test data (users, games, puzzles, etc)
+      mkdir -p /workspace/mongodb-data
+      sudo mongod --fork --dbpath /workspace/mongodb-data --logpath /var/log/mongod.log
+      mongo lichess /workspace/lila/bin/mongodb/indexes.js
+      mongorestore /workspace/lila-db-seed/dump
+      python3.9 /workspace/lila-db-seed/spamdb/spamdb.py
+      # compile lila-ws
+      cd /workspace/lila-ws && sbt compile
+      # compile js + css
+      cd /workspace/lila && ./ui/build
+      echo 'Setup complete!'
+    command: |
+      sudo mongod --fork --dbpath /workspace/mongodb-data --logpath /var/log/mongod.log
+      redis-server --daemonize yes
+      ## Create config for lila
+      cp /workspace/lila/conf/application.conf.default /workspace/lila/conf/application.conf
+      tee -a /workspace/lila/conf/application.conf <<EOF
+      net.domain = "$(gp url 9663 | cut -c9-)"
+      net.socket.domains = [ "$(gp url 9664 | cut -c9-)" ]
+      net.base_url = "$(gp url 9663)"
+      net.asset.base_url = "$(gp url 9663)"
+      EOF
+      ## Create config for lila-ws
+      tee /workspace/lila-ws-codespace-application.conf <<EOF
+      include "application"
+      csrf.origin = "$(gp url 9663)"
+      EOF
+      gp sync-done setup
+  - name: lila-ws
+    command: |
+      gp sync-await setup
+      cd /workspace/lila-ws
+      sbt -Dconfig.file=/workspace/lila-ws-codespace-application.conf run
+  - name: lila
+    openMode: split-right
+    command: |
+      sbt bloopInstall
+      bloop compile lila
+      bloop run lila -m play.core.server.ProdServerStart -c /workspace/lila/.bloop
+
+ports:
+  - port: 9663
+    name: lila
+    onOpen: open-preview
+  - port: 9664
+    name: lila-ws
+    onOpen: ignore
+  - port: 9665
+    name: lila-fishnet
+  - port: 6379
+    name: redis
+    onOpen: ignore
+  - port: 8212
+    name: bloop
+    onOpen: ignore
+  - port: 27017
+    name: mongodb
+    onOpen: ignore
+
+github:
+  prebuilds:
+    addCheck: false
+    branches: true
+    pullRequestsFromForks: true
