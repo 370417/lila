@@ -44,6 +44,17 @@ tasks:
       userbacklog=short
       EOF
       gp sync-done setup
+  - name: lila-ws
+    command: |
+      gp sync-await setup
+      cd /workspace/lila-ws
+      sbt -Dconfig.file=/workspace/lila-ws-gitpod-application.conf run
+  - name: lila
+    openMode: split-right
+    command: |
+      sbt bloopInstall
+      bloop compile lila
+      bloop run lila -m play.core.server.ProdServerStart
   - name: lila-fishnet (play computer)
     command: |
       cd /workspace/lila-fishnet/
@@ -61,17 +72,6 @@ tasks:
       cd /workspace/fishnet/
       gp sync-await fishnet-build
       cargo run -- --endpoint http://localhost:9663/fishnet/
-  - name: lila-ws
-    command: |
-      gp sync-await setup
-      cd /workspace/lila-ws
-      sbt -Dconfig.file=/workspace/lila-ws-gitpod-application.conf run
-  - name: lila
-    openMode: split-right
-    command: |
-      sbt bloopInstall
-      bloop compile lila
-      bloop run lila -m play.core.server.ProdServerStart
 
 ports:
   - port: 9663
