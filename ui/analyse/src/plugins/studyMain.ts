@@ -1,11 +1,12 @@
-import makeBoot from './boot';
+import makeBoot from '../boot';
 import LichessChat from 'chat';
 import { Chessground } from 'chessground';
-import { patch, makeStart } from './start';
+import { patch, makeStart } from '../start';
+import * as deps from '../deps';
 
 export { patch };
 
-export const start = makeStart();
+export const start = makeStart(deps);
 
 export const boot = makeBoot(start);
 
