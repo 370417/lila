@@ -71,7 +71,7 @@ tasks:
     command: |
       sbt bloopInstall
       bloop compile lila
-      bloop run lila -m play.core.server.ProdServerStart -c /workspace/lila/.bloop
+      bloop run lila -m play.core.server.ProdServerStart
 
 ports:
   - port: 9663
