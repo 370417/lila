@@ -9,15 +9,15 @@ additionalRepositories:
 tasks:
   - name: setup
     init: |
-      # setup initial database and seed test data (users, games, puzzles, etc)
+      ## Setup initial database and seed test data (users, games, puzzles, etc)
       mkdir -p /workspace/mongodb-data
       sudo mongod --fork --dbpath /workspace/mongodb-data --logpath /var/log/mongod.log
       mongo lichess /workspace/lila/bin/mongodb/indexes.js
       mongorestore /workspace/lila-db-seed/dump
       python3.9 /workspace/lila-db-seed/spamdb/spamdb.py
-      # compile lila-ws
+      ## Compile lila-ws
       cd /workspace/lila-ws && sbt compile
-      # compile js + css
+      ## Compile js + css
       cd /workspace/lila && ./ui/build
       echo 'Setup complete!'
     command: |
@@ -31,29 +31,36 @@ tasks:
       net.base_url = "$(gp url 9663)"
       net.asset.base_url = "$(gp url 9663)"
       EOF
-      ## Create config for lila-ws
+      ## Create config for lila-ws (websockets)
       tee /workspace/lila-ws-gitpod-application.conf <<EOF
       include "application"
       csrf.origin = "$(gp url 9663)"
       EOF
-      gp sync-done setup
-  - name: fishnet (Stockfish analysis)
-    command: |
-      cd /workspace/fishnet/
-      tee fishnet.ini <<EOF
+      ## Create config for fishnet clients
+      tee /workspace/fishnet/fishnet.ini <<EOF
       [fishnet]
       cores=auto
       systembacklog=long
       userbacklog=short
       EOF
-      cargo build
-      gp ports await 9663 # wait for lila to start
-      cargo run -- --endpoint http://localhost:9663/fishnet/
-  - name: lila-fishnet (Play computer)
-    openMode: split-right
+      gp sync-done setup
+  - name: lila-fishnet (play computer)
     command: |
       cd /workspace/lila-fishnet/
       sbt run -Dhttp.port=9665
+  - name: fishnet client (play computer)
+    openMode: split-right
+    command: |
+      cd /workspace/fishnet/
+      cargo build
+      gp sync-done fishnet-build
+      cargo run -- --endpoint http://localhost:9665/fishnet/
+  - name: fishnet client (analysis)
+    openMode: split-right
+    command: |
+      cd /workspace/fishnet/
+      gp sync-await fishnet-build
+      cargo run -- --endpoint http://localhost:9663/fishnet/
   - name: lila-ws
     command: |
       gp sync-await setup
