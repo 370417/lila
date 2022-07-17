@@ -8,8 +8,6 @@ import * as xhr from 'common/xhr';
 import debounce from 'common/debounce';
 import GamebookPlayCtrl from './study/gamebook/gamebookPlayCtrl';
 import type makeStudyCtrl from './study/studyCtrl';
-// eslint-disable-next-line no-duplicate-imports
-import makeStudyDirect from './study/studyCtrl';
 import throttle from 'common/throttle';
 import { AnalyseOpts, AnalyseData, ServerEvalData, Key, JustCaptured, NvuiPlugin, Redraw } from './interfaces';
 import { Api as ChessgroundApi } from 'chessground/api';
@@ -118,8 +116,6 @@ export default class AnalyseCtrl {
   pvUciQueue: Uci[] = [];
 
   constructor(readonly opts: AnalyseOpts, readonly redraw: Redraw, makeStudy?: typeof makeStudyCtrl) {
-    console.log(makeStudyDirect, makeStudy);
-
     this.data = opts.data;
     this.element = opts.element;
     this.embed = opts.embed;

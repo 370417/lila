@@ -95,7 +95,7 @@ function renderRunning(root: AnalyseCtrl, ctrl: PracticeCtrl): VNode {
   ]);
 }
 
-export function practiceView(root: AnalyseCtrl): VNode | undefined {
+export default function (root: AnalyseCtrl): VNode | undefined {
   const ctrl = root.practice;
   if (!ctrl) return;
   const comment: Comment | null = ctrl.comment();

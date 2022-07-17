@@ -1,6 +1,5 @@
 import { view as cevalView } from 'ceval';
 import { read as readFen } from 'chessground/fen';
-import * as materialView from 'game/view/material'; // TODO: reorder imports back to original spots
 import { parseFen } from 'chessops/fen';
 import { defined } from 'common';
 import {
@@ -14,6 +13,7 @@ import {
 } from 'common/snabbdom';
 import { getPlayer, playable } from 'game';
 import * as router from 'game/router';
+import * as materialView from 'game/view/material';
 import statusView from 'game/view/status';
 import { h, VNode } from 'snabbdom';
 import { ops as treeOps, path as treePath } from 'tree';
@@ -39,18 +39,21 @@ import { spinnerVdom as spinner } from 'common/spinner';
 import stepwiseScroll from 'common/wheel';
 import type * as studyDeps from './study/studyDeps';
 
-export function renderMaterialDiffs(ctrl: AnalyseCtrl): [VNode, VNode] {
-  const cgState = ctrl.chessground?.state,
-    pieces = cgState ? cgState.pieces : readFen(ctrl.node.fen);
-
-  return materialView.renderMaterialDiffs(
-    !!ctrl.data.pref.showCaptured,
-    ctrl.bottomColor(),
-    pieces,
-    !!(ctrl.data.player.checks || ctrl.data.opponent.checks), // showChecks
-    ctrl.nodeList,
-    ctrl.node.ply
-  );
+function makeConcealOf(ctrl: AnalyseCtrl): ConcealOf | undefined {
+  const conceal =
+    ctrl.study && ctrl.study.data.chapter.conceal !== undefined
+      ? {
+          owner: ctrl.study.isChapterOwner(),
+          ply: ctrl.study.data.chapter.conceal,
+        }
+      : null;
+  if (conceal)
+    return (isMainline: boolean) => (path: Tree.Path, node: Tree.Node) => {
+      if (!conceal || (isMainline && conceal.ply >= node.ply)) return null;
+      if (treePath.contains(ctrl.path, path)) return null;
+      return conceal.owner ? 'conceal' : 'hide';
+    };
+  return undefined;
 }
 
 export const renderNextChapter = (ctrl: AnalyseCtrl) =>
@@ -70,23 +73,6 @@ export const renderNextChapter = (ctrl: AnalyseCtrl) =>
         ctrl.trans.noarg('nextChapter')
       )
     : null;
-
-function makeConcealOf(ctrl: AnalyseCtrl): ConcealOf | undefined {
-  const conceal =
-    ctrl.study && ctrl.study.data.chapter.conceal !== undefined
-      ? {
-          owner: ctrl.study.isChapterOwner(),
-          ply: ctrl.study.data.chapter.conceal,
-        }
-      : null;
-  if (conceal)
-    return (isMainline: boolean) => (path: Tree.Path, node: Tree.Node) => {
-      if (!conceal || (isMainline && conceal.ply >= node.ply)) return null;
-      if (treePath.contains(ctrl.path, path)) return null;
-      return conceal.owner ? 'conceal' : 'hide';
-    };
-  return undefined;
-}
 
 const jumpButton = (icon: string, effect: string, enabled: boolean): VNode =>
   h('button.fbt', {
@@ -306,6 +292,20 @@ const analysisDisabled = (ctrl: AnalyseCtrl): MaybeVNode =>
 
 const renderPlayerStrip = (cls: string, materialDiff: VNode, clock?: VNode): VNode =>
   h('div.analyse__player_strip.' + cls, [materialDiff, clock]);
+
+export function renderMaterialDiffs(ctrl: AnalyseCtrl): [VNode, VNode] {
+  const cgState = ctrl.chessground?.state,
+    pieces = cgState ? cgState.pieces : readFen(ctrl.node.fen);
+
+  return materialView.renderMaterialDiffs(
+    !!ctrl.data.pref.showCaptured,
+    ctrl.bottomColor(),
+    pieces,
+    !!(ctrl.data.player.checks || ctrl.data.opponent.checks), // showChecks
+    ctrl.nodeList,
+    ctrl.node.ply
+  );
+}
 
 function renderPlayerStrips(ctrl: AnalyseCtrl): [VNode, VNode] | undefined {
   if (ctrl.embed) return;
