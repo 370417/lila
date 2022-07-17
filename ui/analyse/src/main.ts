@@ -6,7 +6,7 @@ import { Chessground } from 'chessground';
 
 export { patch };
 
-export const start = makeStart(patch); // mimi
+export const start = makeStart(patch);
 
 export const boot = makeBoot(start);
 

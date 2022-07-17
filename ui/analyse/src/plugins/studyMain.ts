@@ -7,7 +7,7 @@ import * as studyDeps from '../study/studyDeps';
 
 export { patch };
 
-export const start = makeStart(patch, studyDeps); // hallo
+export const start = makeStart(patch, studyDeps);
 
 export const boot = makeBoot(start);
 
