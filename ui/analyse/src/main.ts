@@ -1,12 +1,12 @@
-import { attributesModule, classModule, init } from 'snabbdom';
+import patch from './patch';
 import makeBoot from './boot';
 import makeStart from './start';
 import LichessChat from 'chat';
 import { Chessground } from 'chessground';
 
-export const patch = init([classModule, attributesModule]);
+export { patch };
 
-export const start = makeStart(patch);
+export const start = makeStart(patch); // mimi
 
 export const boot = makeBoot(start);
 

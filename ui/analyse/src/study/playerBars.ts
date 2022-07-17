@@ -1,8 +1,7 @@
 import { h, VNode } from 'snabbdom';
-import { read as readFen } from 'chessground/fen';
-import * as materialView from 'game/view/material';
 import renderClocks from '../clocks';
 import AnalyseCtrl from '../ctrl';
+import { renderMaterialDiffs } from '../view';
 import { TagArray } from './interfaces';
 import { findTag, isFinished, looksLikeLichessGame, resultOf } from './studyChapters';
 
@@ -11,21 +10,7 @@ interface PlayerNames {
   black: string;
 }
 
-export function renderMaterialDiffs(ctrl: AnalyseCtrl): [VNode, VNode] {
-  const cgState = ctrl.chessground?.state,
-    pieces = cgState ? cgState.pieces : readFen(ctrl.node.fen);
-
-  return materialView.renderMaterialDiffs(
-    !!ctrl.data.pref.showCaptured,
-    ctrl.bottomColor(),
-    pieces,
-    !!(ctrl.data.player.checks || ctrl.data.opponent.checks), // showChecks
-    ctrl.nodeList,
-    ctrl.node.ply
-  );
-}
-
-export function renderPlayerBars(ctrl: AnalyseCtrl): VNode[] | undefined {
+export default function (ctrl: AnalyseCtrl): VNode[] | undefined {
   const study = ctrl.study;
   if (!study || ctrl.embed) return;
   const tags = study.data.chapter.tags,
