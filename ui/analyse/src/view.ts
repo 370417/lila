@@ -71,6 +71,255 @@ export const renderNextChapter = (ctrl: AnalyseCtrl) =>
       )
     : null;
 
+function makeConcealOf(ctrl: AnalyseCtrl): ConcealOf | undefined {
+  const conceal =
+    ctrl.study && ctrl.study.data.chapter.conceal !== undefined
+      ? {
+          owner: ctrl.study.isChapterOwner(),
+          ply: ctrl.study.data.chapter.conceal,
+        }
+      : null;
+  if (conceal)
+    return (isMainline: boolean) => (path: Tree.Path, node: Tree.Node) => {
+      if (!conceal || (isMainline && conceal.ply >= node.ply)) return null;
+      if (treePath.contains(ctrl.path, path)) return null;
+      return conceal.owner ? 'conceal' : 'hide';
+    };
+  return undefined;
+}
+
+const jumpButton = (icon: string, effect: string, enabled: boolean): VNode =>
+  h('button.fbt', {
+    class: { disabled: !enabled },
+    attrs: { 'data-act': effect, 'data-icon': icon },
+  });
+
+const dataAct = (e: Event): string | null => {
+  const target = e.target as HTMLElement;
+  return target.getAttribute('data-act') || (target.parentNode as HTMLElement).getAttribute('data-act');
+};
+
+function repeater(ctrl: AnalyseCtrl, action: 'prev' | 'next', e: Event) {
+  const repeat = () => {
+    control[action](ctrl);
+    ctrl.redraw();
+    delay = Math.max(100, delay - delay / 15);
+    timeout = setTimeout(repeat, delay);
+  };
+  let delay = 350;
+  let timeout = setTimeout(repeat, 500);
+  control[action](ctrl);
+  const eventName = e.type == 'touchstart' ? 'touchend' : 'mouseup';
+  document.addEventListener(eventName, () => clearTimeout(timeout), { once: true });
+}
+
+function inputs(ctrl: AnalyseCtrl): VNode | undefined {
+  if (ctrl.ongoing || !ctrl.data.userAnalysis) return;
+  if (ctrl.redirecting) return spinner();
+  return h('div.copyables', [
+    h('div.pair', [
+      h('label.name', 'FEN'),
+      h('input.copyable.autoselect.analyse__underboard__fen', {
+        attrs: { spellCheck: false },
+        hook: {
+          insert: vnode => {
+            const el = vnode.elm as HTMLInputElement;
+            el.value = defined(ctrl.fenInput) ? ctrl.fenInput : ctrl.node.fen;
+            el.addEventListener('change', _ => {
+              if (el.value !== ctrl.node.fen && el.reportValidity()) ctrl.changeFen(el.value.trim());
+            });
+            el.addEventListener('input', _ => {
+              ctrl.fenInput = el.value;
+              el.setCustomValidity(parseFen(el.value.trim()).isOk ? '' : 'Invalid FEN');
+            });
+          },
+          postpatch: (_, vnode) => {
+            const el = vnode.elm as HTMLInputElement;
+            if (!defined(ctrl.fenInput)) {
+              el.value = ctrl.node.fen;
+              el.setCustomValidity('');
+            } else if (el.value != ctrl.fenInput) el.value = ctrl.fenInput;
+          },
+        },
+      }),
+    ]),
+    h('div.pgn', [
+      h('div.pair', [
+        h('label.name', 'PGN'),
+        h('textarea.copyable.autoselect', {
+          attrs: { spellCheck: false },
+          hook: {
+            ...onInsert(el => {
+              (el as HTMLTextAreaElement).value = defined(ctrl.pgnInput)
+                ? ctrl.pgnInput
+                : pgnExport.renderFullTxt(ctrl);
+              el.addEventListener('input', e => (ctrl.pgnInput = (e.target as HTMLTextAreaElement).value));
+            }),
+            postpatch: (_, vnode) => {
+              (vnode.elm as HTMLTextAreaElement).value = defined(ctrl.pgnInput)
+                ? ctrl.pgnInput
+                : pgnExport.renderFullTxt(ctrl);
+            },
+          },
+        }),
+        h(
+          'button.button.button-thin.action.text',
+          {
+            attrs: dataIcon(''),
+            hook: bind(
+              'click',
+              _ => {
+                const pgn = $('.copyables .pgn textarea').val() as string;
+                if (pgn !== pgnExport.renderFullTxt(ctrl)) ctrl.changePgn(pgn);
+              },
+              ctrl.redraw
+            ),
+          },
+          ctrl.trans.noarg('importPgn')
+        ),
+      ]),
+    ]),
+  ]);
+}
+
+function controls(ctrl: AnalyseCtrl) {
+  const canJumpPrev = ctrl.path !== '',
+    canJumpNext = !!ctrl.node.children[0],
+    menuIsOpen = ctrl.actionMenu.open,
+    noarg = ctrl.trans.noarg;
+  let iconFirst = '';
+  let iconPrev = '';
+  let iconNext = '';
+  let iconLast = '';
+  if (document.dir == 'rtl') {
+    iconLast = '';
+    iconNext = '';
+    iconPrev = '';
+    iconFirst = '';
+  }
+  return h(
+    'div.analyse__controls.analyse-controls',
+    {
+      hook: onInsert(el => {
+        bindMobileMousedown(
+          el,
+          e => {
+            const action = dataAct(e);
+            if (action === 'prev' || action === 'next') repeater(ctrl, action, e);
+            else if (action === 'first') control.first(ctrl);
+            else if (action === 'last') control.last(ctrl);
+            else if (action === 'explorer') ctrl.toggleExplorer();
+            else if (action === 'practice') ctrl.togglePractice();
+            else if (action === 'menu') ctrl.actionMenu.toggle();
+            else if (action === 'analysis' && ctrl.studyPractice)
+              window.open(ctrl.studyPractice.analysisUrl(), '_blank', 'noopener');
+          },
+          ctrl.redraw
+        );
+      }),
+    },
+    [
+      ctrl.embed
+        ? null
+        : h(
+            'div.features',
+            ctrl.studyPractice
+              ? [
+                  h('button.fbt', {
+                    attrs: {
+                      title: noarg('analysis'),
+                      'data-act': 'analysis',
+                      'data-icon': '',
+                    },
+                  }),
+                ]
+              : [
+                  h('button.fbt', {
+                    attrs: {
+                      title: noarg('openingExplorerAndTablebase'),
+                      'data-act': 'explorer',
+                      'data-icon': '',
+                    },
+                    class: {
+                      hidden: menuIsOpen || !ctrl.explorer.allowed() || !!ctrl.retro,
+                      active: ctrl.explorer.enabled(),
+                    },
+                  }),
+                  ctrl.ceval.possible && ctrl.ceval.allowed() && !ctrl.isGamebook()
+                    ? h('button.fbt', {
+                        attrs: {
+                          title: noarg('practiceWithComputer'),
+                          'data-act': 'practice',
+                          'data-icon': '',
+                        },
+                        class: {
+                          hidden: menuIsOpen || !!ctrl.retro,
+                          active: !!ctrl.practice,
+                        },
+                      })
+                    : null,
+                ]
+          ),
+      h('div.jumps', [
+        jumpButton(iconFirst, 'first', canJumpPrev),
+        jumpButton(iconPrev, 'prev', canJumpPrev),
+        jumpButton(iconNext, 'next', canJumpNext),
+        jumpButton(iconLast, 'last', canJumpNext),
+      ]),
+      ctrl.studyPractice
+        ? h('div.noop')
+        : h('button.fbt', {
+            class: { active: menuIsOpen },
+            attrs: {
+              title: noarg('menu'),
+              'data-act': 'menu',
+              'data-icon': '',
+            },
+          }),
+    ]
+  );
+}
+
+function forceInnerCoords(ctrl: AnalyseCtrl, v: boolean) {
+  if (ctrl.data.pref.coords === Prefs.Coords.Outside) {
+    $('body').toggleClass('coords-in', v).toggleClass('coords-out', !v);
+  }
+}
+
+const addChapterId = (study: StudyCtrl | undefined, cssClass: string) =>
+  cssClass + (study && study.data.chapter ? '.' + study.data.chapter.id : '');
+
+const analysisDisabled = (ctrl: AnalyseCtrl): MaybeVNode =>
+  ctrl.ceval.possible && ctrl.ceval.allowed()
+    ? h('div.comp-off__hint', [
+        h('span', ctrl.trans.noarg('computerAnalysisDisabled')),
+        h(
+          'button',
+          {
+            hook: bind('click', ctrl.toggleComputer, ctrl.redraw),
+            attrs: { type: 'button' },
+          },
+          ctrl.trans.noarg('enable')
+        ),
+      ])
+    : undefined;
+
+const renderPlayerStrip = (cls: string, materialDiff: VNode, clock?: VNode): VNode =>
+  h('div.analyse__player_strip.' + cls, [materialDiff, clock]);
+
+function renderPlayerStrips(ctrl: AnalyseCtrl): [VNode, VNode] | undefined {
+  if (ctrl.embed) return;
+
+  const clocks = renderClocks(ctrl),
+    whitePov = ctrl.bottomIsWhite(),
+    materialDiffs = renderMaterialDiffs(ctrl);
+
+  return [
+    renderPlayerStrip('top', materialDiffs[0], clocks?.[whitePov ? 1 : 0]),
+    renderPlayerStrip('bottom', materialDiffs[1], clocks?.[whitePov ? 0 : 1]),
+  ];
+}
+
 export default function (deps?: typeof studyDeps) {
   function renderResult(ctrl: AnalyseCtrl): VNode[] {
     const render = (result: string, status: MaybeVNodes) => [h('div.result', result), h('div.status', status)];
@@ -101,23 +350,6 @@ export default function (deps?: typeof studyDeps) {
     return [];
   }
 
-  function makeConcealOf(ctrl: AnalyseCtrl): ConcealOf | undefined {
-    const conceal =
-      ctrl.study && ctrl.study.data.chapter.conceal !== undefined
-        ? {
-            owner: ctrl.study.isChapterOwner(),
-            ply: ctrl.study.data.chapter.conceal,
-          }
-        : null;
-    if (conceal)
-      return (isMainline: boolean) => (path: Tree.Path, node: Tree.Node) => {
-        if (!conceal || (isMainline && conceal.ply >= node.ply)) return null;
-        if (treePath.contains(ctrl.path, path)) return null;
-        return conceal.owner ? 'conceal' : 'hide';
-      };
-    return undefined;
-  }
-
   const renderAnalyse = (ctrl: AnalyseCtrl, concealOf?: ConcealOf) =>
     h('div.analyse__moves.areplay', [
       h('div', [
@@ -127,238 +359,6 @@ export default function (deps?: typeof studyDeps) {
       ]),
       !ctrl.practice && !deps?.gbEdit.running(ctrl) ? renderNextChapter(ctrl) : null,
     ]);
-
-  function inputs(ctrl: AnalyseCtrl): VNode | undefined {
-    if (ctrl.ongoing || !ctrl.data.userAnalysis) return;
-    if (ctrl.redirecting) return spinner();
-    return h('div.copyables', [
-      h('div.pair', [
-        h('label.name', 'FEN'),
-        h('input.copyable.autoselect.analyse__underboard__fen', {
-          attrs: { spellCheck: false },
-          hook: {
-            insert: vnode => {
-              const el = vnode.elm as HTMLInputElement;
-              el.value = defined(ctrl.fenInput) ? ctrl.fenInput : ctrl.node.fen;
-              el.addEventListener('change', _ => {
-                if (el.value !== ctrl.node.fen && el.reportValidity()) ctrl.changeFen(el.value.trim());
-              });
-              el.addEventListener('input', _ => {
-                ctrl.fenInput = el.value;
-                el.setCustomValidity(parseFen(el.value.trim()).isOk ? '' : 'Invalid FEN');
-              });
-            },
-            postpatch: (_, vnode) => {
-              const el = vnode.elm as HTMLInputElement;
-              if (!defined(ctrl.fenInput)) {
-                el.value = ctrl.node.fen;
-                el.setCustomValidity('');
-              } else if (el.value != ctrl.fenInput) el.value = ctrl.fenInput;
-            },
-          },
-        }),
-      ]),
-      h('div.pgn', [
-        h('div.pair', [
-          h('label.name', 'PGN'),
-          h('textarea.copyable.autoselect', {
-            attrs: { spellCheck: false },
-            hook: {
-              ...onInsert(el => {
-                (el as HTMLTextAreaElement).value = defined(ctrl.pgnInput)
-                  ? ctrl.pgnInput
-                  : pgnExport.renderFullTxt(ctrl);
-                el.addEventListener('input', e => (ctrl.pgnInput = (e.target as HTMLTextAreaElement).value));
-              }),
-              postpatch: (_, vnode) => {
-                (vnode.elm as HTMLTextAreaElement).value = defined(ctrl.pgnInput)
-                  ? ctrl.pgnInput
-                  : pgnExport.renderFullTxt(ctrl);
-              },
-            },
-          }),
-          h(
-            'button.button.button-thin.action.text',
-            {
-              attrs: dataIcon(''),
-              hook: bind(
-                'click',
-                _ => {
-                  const pgn = $('.copyables .pgn textarea').val() as string;
-                  if (pgn !== pgnExport.renderFullTxt(ctrl)) ctrl.changePgn(pgn);
-                },
-                ctrl.redraw
-              ),
-            },
-            ctrl.trans.noarg('importPgn')
-          ),
-        ]),
-      ]),
-    ]);
-  }
-
-  const jumpButton = (icon: string, effect: string, enabled: boolean): VNode =>
-    h('button.fbt', {
-      class: { disabled: !enabled },
-      attrs: { 'data-act': effect, 'data-icon': icon },
-    });
-
-  const dataAct = (e: Event): string | null => {
-    const target = e.target as HTMLElement;
-    return target.getAttribute('data-act') || (target.parentNode as HTMLElement).getAttribute('data-act');
-  };
-
-  function repeater(ctrl: AnalyseCtrl, action: 'prev' | 'next', e: Event) {
-    const repeat = () => {
-      control[action](ctrl);
-      ctrl.redraw();
-      delay = Math.max(100, delay - delay / 15);
-      timeout = setTimeout(repeat, delay);
-    };
-    let delay = 350;
-    let timeout = setTimeout(repeat, 500);
-    control[action](ctrl);
-    const eventName = e.type == 'touchstart' ? 'touchend' : 'mouseup';
-    document.addEventListener(eventName, () => clearTimeout(timeout), { once: true });
-  }
-
-  function controls(ctrl: AnalyseCtrl) {
-    const canJumpPrev = ctrl.path !== '',
-      canJumpNext = !!ctrl.node.children[0],
-      menuIsOpen = ctrl.actionMenu.open,
-      noarg = ctrl.trans.noarg;
-    let iconFirst = '';
-    let iconPrev = '';
-    let iconNext = '';
-    let iconLast = '';
-    if (document.dir == 'rtl') {
-      iconLast = '';
-      iconNext = '';
-      iconPrev = '';
-      iconFirst = '';
-    }
-    return h(
-      'div.analyse__controls.analyse-controls',
-      {
-        hook: onInsert(el => {
-          bindMobileMousedown(
-            el,
-            e => {
-              const action = dataAct(e);
-              if (action === 'prev' || action === 'next') repeater(ctrl, action, e);
-              else if (action === 'first') control.first(ctrl);
-              else if (action === 'last') control.last(ctrl);
-              else if (action === 'explorer') ctrl.toggleExplorer();
-              else if (action === 'practice') ctrl.togglePractice();
-              else if (action === 'menu') ctrl.actionMenu.toggle();
-              else if (action === 'analysis' && ctrl.studyPractice)
-                window.open(ctrl.studyPractice.analysisUrl(), '_blank', 'noopener');
-            },
-            ctrl.redraw
-          );
-        }),
-      },
-      [
-        ctrl.embed
-          ? null
-          : h(
-              'div.features',
-              ctrl.studyPractice
-                ? [
-                    h('button.fbt', {
-                      attrs: {
-                        title: noarg('analysis'),
-                        'data-act': 'analysis',
-                        'data-icon': '',
-                      },
-                    }),
-                  ]
-                : [
-                    h('button.fbt', {
-                      attrs: {
-                        title: noarg('openingExplorerAndTablebase'),
-                        'data-act': 'explorer',
-                        'data-icon': '',
-                      },
-                      class: {
-                        hidden: menuIsOpen || !ctrl.explorer.allowed() || !!ctrl.retro,
-                        active: ctrl.explorer.enabled(),
-                      },
-                    }),
-                    ctrl.ceval.possible && ctrl.ceval.allowed() && !ctrl.isGamebook()
-                      ? h('button.fbt', {
-                          attrs: {
-                            title: noarg('practiceWithComputer'),
-                            'data-act': 'practice',
-                            'data-icon': '',
-                          },
-                          class: {
-                            hidden: menuIsOpen || !!ctrl.retro,
-                            active: !!ctrl.practice,
-                          },
-                        })
-                      : null,
-                  ]
-            ),
-        h('div.jumps', [
-          jumpButton(iconFirst, 'first', canJumpPrev),
-          jumpButton(iconPrev, 'prev', canJumpPrev),
-          jumpButton(iconNext, 'next', canJumpNext),
-          jumpButton(iconLast, 'last', canJumpNext),
-        ]),
-        ctrl.studyPractice
-          ? h('div.noop')
-          : h('button.fbt', {
-              class: { active: menuIsOpen },
-              attrs: {
-                title: noarg('menu'),
-                'data-act': 'menu',
-                'data-icon': '',
-              },
-            }),
-      ]
-    );
-  }
-
-  function forceInnerCoords(ctrl: AnalyseCtrl, v: boolean) {
-    if (ctrl.data.pref.coords === Prefs.Coords.Outside) {
-      $('body').toggleClass('coords-in', v).toggleClass('coords-out', !v);
-    }
-  }
-
-  const addChapterId = (study: StudyCtrl | undefined, cssClass: string) =>
-    cssClass + (study && study.data.chapter ? '.' + study.data.chapter.id : '');
-
-  const analysisDisabled = (ctrl: AnalyseCtrl): MaybeVNode =>
-    ctrl.ceval.possible && ctrl.ceval.allowed()
-      ? h('div.comp-off__hint', [
-          h('span', ctrl.trans.noarg('computerAnalysisDisabled')),
-          h(
-            'button',
-            {
-              hook: bind('click', ctrl.toggleComputer, ctrl.redraw),
-              attrs: { type: 'button' },
-            },
-            ctrl.trans.noarg('enable')
-          ),
-        ])
-      : undefined;
-
-  const renderPlayerStrip = (cls: string, materialDiff: VNode, clock?: VNode): VNode =>
-    h('div.analyse__player_strip.' + cls, [materialDiff, clock]);
-
-  function renderPlayerStrips(ctrl: AnalyseCtrl): [VNode, VNode] | undefined {
-    if (ctrl.embed) return;
-
-    const clocks = renderClocks(ctrl),
-      whitePov = ctrl.bottomIsWhite(),
-      materialDiffs = renderMaterialDiffs(ctrl);
-
-    return [
-      renderPlayerStrip('top', materialDiffs[0], clocks?.[whitePov ? 1 : 0]),
-      renderPlayerStrip('bottom', materialDiffs[1], clocks?.[whitePov ? 0 : 1]),
-    ];
-  }
 
   return function (ctrl: AnalyseCtrl): VNode {
     if (ctrl.nvui) return ctrl.nvui.render();
